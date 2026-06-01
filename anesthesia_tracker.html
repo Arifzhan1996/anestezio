@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>АнестезиоЛог</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f4;color:#1c1c1b;min-height:100vh}
+.screen{display:none}.screen.active{display:block}
+
+/* SETUP */
+.setup-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;gap:1rem}
+.setup-card{background:#fff;border:1px solid #e5e5e3;border-radius:14px;padding:2rem;width:100%;max-width:500px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.setup-card h2{font-size:20px;font-weight:700;margin-bottom:.5rem}
+.setup-card p{font-size:14px;color:#666;line-height:1.6;margin-bottom:1.25rem}
+.steps{counter-reset:s;margin-bottom:1.5rem}
+.step{display:flex;gap:12px;margin-bottom:1rem;align-items:flex-start}
+.step-num{width:26px;height:26px;background:#1c1c1b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;margin-top:1px}
+.step-text{font-size:13px;color:#444;line-height:1.6}
+.step-text a{color:#0369a1;text-decoration:none;font-weight:600}
+.step-text a:hover{text-decoration:underline}
+.step-text code{background:#f1f0ee;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:.9rem}
+.field label{font-size:13px;color:#666;font-weight:500}
+.field input{width:100%;padding:9px 12px;font-size:14px;border:1px solid #d6d5d1;border-radius:8px;background:#fff;color:#1c1c1b;font-family:monospace}
+.field input:focus{outline:none;border-color:#555}
+.btn-primary{width:100%;padding:11px;background:#1c1c1b;border:none;border-radius:8px;font-size:15px;font-weight:600;color:#fff;cursor:pointer}
+.btn-primary:hover{background:#333}
+.err{font-size:12px;color:#c0392b;min-height:16px;margin-top:.25rem}
+
+/* LOGIN */
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1rem;padding:2rem}
+.login-card{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:2rem;width:100%;max-width:340px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.login-card h2{font-size:20px;font-weight:700;margin-bottom:1.5rem}
+
+/* MAIN */
+.topbar{background:#fff;border-bottom:1px solid #e5e5e3;padding:12px 1.25rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:16px;font-weight:700}
+.badge{font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600;margin-left:8px}
+.badge-doc{background:#e8f4fd;color:#1a6fa0}
+.badge-adm{background:#fff3cd;color:#856404}
+.sync-indicator{font-size:12px;padding:3px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:5px}
+.sync-ok{background:#d1fae5;color:#065f46}
+.sync-err{background:#fee2e2;color:#991b1b}
+.sync-loading{background:#f1f0ee;color:#666}
+.btn-sm{padding:7px 14px;font-size:13px;border:1px solid #d6d5d1;border-radius:8px;background:#fff;color:#555;cursor:pointer}
+.btn-sm:hover{background:#f5f5f4}
+.tabs{display:flex;border-bottom:1px solid #e5e5e3;padding:0 1.25rem;background:#fff;overflow-x:auto}
+.tab{padding:11px 16px;font-size:14px;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-weight:500}
+.tab.active{color:#1c1c1b;border-bottom-color:#1c1c1b;font-weight:700}
+.tab:hover:not(.active){color:#333}
+.content{padding:1.25rem;max-width:940px;margin:0 auto}
+.card{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:1rem}
+.card-title{font-size:15px;font-weight:700;margin-bottom:1rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:.75rem}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:560px){.form-row,.form-row.three{grid-template-columns:1fr}}
+.btn-save{padding:10px 22px;background:#1c1c1b;border:none;border-radius:8px;font-size:14px;font-weight:600;color:#fff;cursor:pointer}
+.btn-save:hover{background:#333}
+.ok-msg{font-size:13px;color:#198754;display:none}
+table{width:100%;font-size:13px;border-collapse:collapse}
+th{text-align:left;font-size:12px;font-weight:600;color:#888;padding:8px 12px;border-bottom:1px solid #eee;background:#fafaf9}
+td{padding:9px 12px;border-bottom:1px solid #f0f0ee;color:#1c1c1b;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf9}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:5px;font-weight:600}
+.tag-etn{background:#e8f4fd;color:#1a6fa0}
+.tag-mask{background:#ede9fe;color:#5b21b6}
+.tag-spin{background:#d1fae5;color:#065f46}
+.tag-epi{background:#fff3cd;color:#856404}
+.tag-reg{background:#fff0e6;color:#9a3412}
+.tag-tvva{background:#fee2e2;color:#991b1b}
+.tag-mon{background:#f1f0ee;color:#6b6b69}
+.del-btn{background:none;border:1px solid #fca5a5;color:#dc2626;cursor:pointer;font-size:13px;padding:4px 10px;border-radius:6px;font-weight:600}
+.del-btn:hover{background:#fee2e2}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem}
+@media(max-width:400px){.grid-3{grid-template-columns:1fr 1fr}}
+.metric{background:#fafaf9;border:1px solid #e5e5e3;border-radius:10px;padding:.9rem 1rem}
+.metric-label{font-size:12px;color:#888;margin-bottom:4px;font-weight:500}
+.metric-val{font-size:22px;font-weight:700}
+.filter-row{display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap}
+.filter-row select{padding:7px 10px;font-size:13px;border:1px solid #d6d5d1;border-radius:8px;background:#fff;color:#1c1c1b}
+.empty{text-align:center;padding:2.5rem;color:#bbb;font-size:14px}
+.anest-block{background:#fafaf9;border:1px solid #e5e5e3;border-radius:10px;padding:1rem;margin-bottom:1rem}
+.anest-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem}
+.anest-name{font-size:15px;font-weight:700}
+.anest-meta{font-size:12px;color:#888;margin-top:2px}
+.anest-total{font-size:18px;font-weight:700}
+.user-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:#fafaf9;border:1px solid #e5e5e3;border-radius:8px;margin-bottom:8px}
+.disc-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:#fee2e2;color:#991b1b;font-weight:700;margin-left:4px;vertical-align:middle}
+.orig-price{font-size:11px;color:#bbb;text-decoration:line-through;margin-right:3px}
+.price-preview{font-size:14px;font-weight:700;color:#1c1c1b;margin-left:10px;min-width:130px;display:inline-block}
+.disc-label{display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;font-weight:500}
+.disc-label input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#dc2626}
+.info-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;font-size:13px;color:#0369a1;margin-bottom:1rem;line-height:1.6}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;font-size:15px;color:#555}
+.spinner{width:36px;height:36px;border:3px solid #e5e5e3;border-top-color:#1c1c1b;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ЗАГРУЗКА -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <span id="loadingMsg">Подключение к базе данных...</span>
+</div>
+
+<!-- НАСТРОЙКА (первый запуск) -->
+<div id="setupScreen" class="screen">
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <h2>🩺 АнестезиоЛог — Настройка</h2>
+      <p>Для синхронизации между врачами из разных городов нужно подключить бесплатную облачную базу данных. Это делается один раз.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Перейдите на <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> и нажмите <b>Sign Up</b> — зарегистрируйтесь бесплатно</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">После входа нажмите на своё имя (вверху справа) → <b>API Keys</b> → скопируйте ключ под надписью <code>Secret Access Key</code></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Вставьте ключ ниже и нажмите «Подключить». После этого раздайте этот HTML-файл всем врачам — они будут работать с одной базой.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Secret Access Key с jsonbin.io</label>
+        <input type="text" id="apiKeyInput" placeholder="$2b$10$..." />
+      </div>
+      <div class="err" id="setupErr"></div>
+      <button class="btn-primary" onclick="doSetup()">Подключить и начать работу</button>
+    </div>
+  </div>
+</div>
+
+<!-- ВХОД -->
+<div id="loginScreen" class="screen">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h2>🩺 АнестезиоЛог</h2>
+      <div class="field"><label>Логин</label><input type="text" id="loginInput" placeholder="Введите логин" /></div>
+      <div class="field"><label>Пароль</label><input type="password" id="passInput" placeholder="Введите пароль" /></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn-primary" onclick="doLogin()">Войти</button>
+    </div>
+    <p style="font-size:12px;color:#bbb;text-align:center">Первый вход: admin / admin123</p>
+  </div>
+</div>
+
+<!-- ГЛАВНЫЙ ЭКРАН -->
+<div id="mainScreen" class="screen">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:6px">
+      <h1>АнестезиоЛог</h1>
+      <span class="badge" id="roleLabel"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="sync-indicator sync-ok" id="syncStatus">● онлайн</span>
+      <span style="font-size:13px;color:#888" id="userLabel"></span>
+      <button class="btn-sm" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="add" onclick="switchTab('add')">➕ Добавить</div>
+    <div class="tab" data-tab="my" onclick="switchTab('my')">📋 Мои наркозы</div>
+    <div class="tab admin-tab" data-tab="report" onclick="switchTab('report')">📊 Отчёт</div>
+    <div class="tab admin-tab" data-tab="users" onclick="switchTab('users')">👥 Сотрудники</div>
+  </div>
+
+  <div class="content">
+
+    <div id="tabAdd">
+      <div class="card">
+        <div class="card-title">Новый наркоз</div>
+        <div class="form-row three">
+          <div class="field" style="margin:0"><label>Дата</label><input type="date" id="fDate" /></div>
+          <div class="field" style="margin:0"><label>Пациент (инициалы)</label><input type="text" id="fPatient" placeholder="Иванов И.И." /></div>
+          <div class="field" style="margin:0"><label>Клиника / отделение</label><input type="text" id="fClinic" placeholder="ННМЦ, частная..." /></div>
+        </div>
+        <div class="form-row">
+          <div class="field" style="margin:0">
+            <label>Вид анестезии</label>
+            <select id="fType" onchange="updateDurOptions()">
+              <option value="ЭТН">Общий наркоз (ЭТН)</option>
+              <option value="Масочный">Масочный наркоз</option>
+              <option value="Спинальная">Спинальная</option>
+              <option value="Эпидуральная">Эпидуральная</option>
+              <option value="Регионарная">Регионарная (блокады)</option>
+              <option value="ТВВА">Внутривенная (ТВВА)</option>
+              <option value="Мониторинг">Мониторинговая седация</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Длительность</label>
+            <select id="fDuration" onchange="updatePreview()"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Скидка</label>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+            <label class="disc-label"><input type="checkbox" id="fDisc" onchange="updatePreview()"> −15% скидка</label>
+            <span class="price-preview" id="pricePreview"></span>
+          </div>
+        </div>
+        <div class="field"><label>Примечание (необязательно)</label><input type="text" id="fNote" placeholder="Диагноз, особенности..." /></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:.5rem;flex-wrap:wrap">
+          <button class="btn-save" onclick="addRecord()">✓ Сохранить</button>
+          <span class="err" id="addErr" style="margin:0"></span>
+          <span class="ok-msg" id="addOk">✓ Сохранено и синхронизировано!</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabMy" style="display:none">
+      <div class="filter-row">
+        <select id="filterMonth" onchange="renderMyTable()"><option value="">Все периоды</option></select>
+        <select id="filterType" onchange="renderMyTable()">
+          <option value="">Все виды</option>
+          <option>ЭТН</option><option>Масочный</option><option>Спинальная</option>
+          <option>Эпидуральная</option><option>Регионарная</option><option>ТВВА</option><option>Мониторинг</option>
+        </select>
+        <button class="btn-sm" onclick="syncAndRefresh()">🔄 Обновить</button>
+      </div>
+      <div class="grid-3" id="myMetrics"></div>
+      <div class="card" style="padding:0;overflow:auto"><div id="myTableWrap"></div></div>
+      <div id="myTotal" style="text-align:right;padding:.75rem 0;font-size:15px;font-weight:700"></div>
+    </div>
+
+    <div id="tabReport" style="display:none">
+      <div class="filter-row">
+        <select id="repMonth" onchange="renderReport()"><option value="">Все периоды</option></select>
+        <button class="btn-sm" onclick="syncAndRefresh()">🔄 Обновить</button>
+      </div>
+      <div id="reportWrap"></div>
+    </div>
+
+    <div id="tabUsers" style="display:none">
+      <div class="info-box">
+        ℹ️ Добавьте врача — он сразу сможет войти с любого устройства из любого города.
+      </div>
+      <div class="card">
+        <div class="card-title">Добавить сотрудника</div>
+        <div class="form-row three">
+          <div class="field" style="margin:0"><label>ФИО</label><input type="text" id="nName" placeholder="Иванов Иван Иванович" /></div>
+          <div class="field" style="margin:0"><label>Логин</label><input type="text" id="nLogin" placeholder="ivanov" /></div>
+          <div class="field" style="margin:0"><label>Пароль</label><input type="text" id="nPass" placeholder="пароль" /></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:.5rem">
+          <button class="btn-save" onclick="addUser()">✓ Добавить</button>
+          <span class="err" id="userErr" style="margin:0"></span>
+          <span class="ok-msg" id="userOk" style="margin:0">✓ Добавлен!</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Список сотрудников</div>
+        <div id="userListWrap"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TARIFF=[[60,15000],[90,20000],[120,35000],[150,40000],[180,45000],[210,50000],[240,55000],[270,60000],[300,65000],[330,70000],[360,75000],[390,80000],[420,85000],[450,90000],[480,95000],[510,100000],[540,105000],[570,110000],[600,115000]];
+const MASK_PRICE=10000;
+const TC={ЭТН:'tag-etn',Масочный:'tag-mask',Спинальная:'tag-spin',Эпидуральная:'tag-epi',Регионарная:'tag-reg',ТВВА:'tag-tvva',Мониторинг:'tag-mon'};
+
+let API_KEY='';
+let BIN_ID='';
+let S={users:{},records:[]};
+let me=null;
+let saving=false;
+
+// ── JSONBin helpers ──────────────────────────────────────────
+async function binCreate(apiKey){
+  const r=await fetch('https://api.jsonbin.io/v3/b',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Name':'AnestezioLog','X-Bin-Private':'false'},
+    body:JSON.stringify({users:{admin:{name:'Администратор',password:'admin123',role:'admin'}},records:[]})
+  });
+  if(!r.ok)throw new Error('Ошибка создания базы: '+r.status);
+  const d=await r.json();
+  return d.metadata.id;
+}
+
+async function binRead(apiKey,binId){
+  const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{
+    headers:{'X-Master-Key':apiKey}
+  });
+  if(!r.ok)throw new Error('Ошибка чтения: '+r.status);
+  const d=await r.json();
+  return d.record;
+}
+
+async function binWrite(apiKey,binId,data){
+  const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}`,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':apiKey},
+    body:JSON.stringify(data)
+  });
+  if(!r.ok)throw new Error('Ошибка записи: '+r.status);
+}
+
+// ── Инициализация ────────────────────────────────────────────
+async function init(){
+  showLoading('Инициализация...');
+  API_KEY=localStorage.getItem('anlog_apikey')||'';
+  BIN_ID=localStorage.getItem('anlog_binid')||'';
+
+  if(!API_KEY){
+    hideLoading();
+    show('setupScreen');
+    return;
+  }
+
+  try{
+    showLoading('Загрузка данных из облака...');
+    if(!BIN_ID){
+      // ищем существующий bin или создаём новый
+      BIN_ID=await binCreate(API_KEY);
+      localStorage.setItem('anlog_binid',BIN_ID);
+    }
+    S=await binRead(API_KEY,BIN_ID);
+    if(!S.users)S.users={};
+    if(!S.records)S.records=[];
+    hideLoading();
+    show('loginScreen');
+    setSyncStatus('ok');
+  }catch(e){
+    hideLoading();
+    // Попробуем найти bin по списку
+    setSyncStatus('err');
+    show('loginScreen');
+    console.error(e);
+  }
+}
+
+async function doSetup(){
+  const key=document.getElementById('apiKeyInput').value.trim();
+  if(!key){document.getElementById('setupErr').textContent='Вставьте API ключ';return;}
+  document.getElementById('setupErr').textContent='';
+  showLoading('Создание базы данных...');
+  try{
+    const binId=await binCreate(key);
+    localStorage.setItem('anlog_apikey',key);
+    localStorage.setItem('anlog_binid',binId);
+    API_KEY=key;BIN_ID=binId;
+    S={users:{admin:{name:'Администратор',password:'admin123',role:'admin'}},records:[]};
+    hideLoading();
+    setSyncStatus('ok');
+    show('loginScreen');
+  }catch(e){
+    hideLoading();
+    document.getElementById('setupErr').textContent='Ошибка: проверьте правильность ключа. '+e.message;
+  }
+}
+
+async function syncDown(){
+  try{
+    S=await binRead(API_KEY,BIN_ID);
+    if(!S.users)S.users={};
+    if(!S.records)S.records=[];
+    setSyncStatus('ok');
+  }catch(e){setSyncStatus('err');console.error(e);}
+}
+
+async function syncUp(){
+  if(saving)return;
+  saving=true;
+  setSyncStatus('loading');
+  try{
+    await binWrite(API_KEY,BIN_ID,S);
+    setSyncStatus('ok');
+  }catch(e){setSyncStatus('err');alert('Ошибка синхронизации: '+e.message);}
+  saving=false;
+}
+
+async function syncAndRefresh(){
+  setSyncStatus('loading');
+  await syncDown();
+  fillMonthFilters();
+  const active=document.querySelector('.tab.active');
+  if(active){
+    const t=active.dataset.tab;
+    if(t==='my')renderMyTable();
+    if(t==='report')renderReport();
+    if(t==='users')renderUserList();
+  }
+}
+
+// ── UI helpers ───────────────────────────────────────────────
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showLoading(msg){document.getElementById('loadingMsg').textContent=msg;document.getElementById('loadingOverlay').style.display='flex';}
+function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
+function setSyncStatus(s){
+  const el=document.getElementById('syncStatus');
+  if(!el)return;
+  if(s==='ok'){el.className='sync-indicator sync-ok';el.textContent='● синхронизировано';}
+  else if(s==='err'){el.className='sync-indicator sync-err';el.textContent='● нет связи';}
+  else{el.className='sync-indicator sync-loading';el.textContent='● синхронизация...';}
+}
+
+// ── Тарифы ───────────────────────────────────────────────────
+function getPrice(type,min){
+  if(type==='Масочный')return MASK_PRICE;
+  const r=TARIFF.find(t=>t[0]===min);return r?r[1]:TARIFF[0][1];
+}
+function fmtDur(m){const h=Math.floor(m/60),mn=m%60;if(!mn)return h===1?'1 час':h+' ч';return h+' ч '+mn+' мин';}
+
+function updateDurOptions(){
+  const type=document.getElementById('fType').value;
+  const sel=document.getElementById('fDuration');
+  if(type==='Масочный'){sel.innerHTML='<option value="0">— фиксированно (10 000 ₸)</option>';sel.disabled=true;}
+  else{sel.disabled=false;sel.innerHTML=TARIFF.map(([m,p])=>`<option value="${m}">${fmtDur(m)} — ${p.toLocaleString('ru')} ₸</option>`).join('');}
+  updatePreview();
+}
+
+function updatePreview(){
+  const type=document.getElementById('fType').value;
+  const min=parseInt(document.getElementById('fDuration').value)||60;
+  const disc=document.getElementById('fDisc').checked;
+  const p=getPrice(type,min);
+  const el=document.getElementById('pricePreview');
+  if(disc){const d=Math.round(p*0.85);el.innerHTML=`<span style="text-decoration:line-through;color:#bbb;font-size:13px;font-weight:400">${p.toLocaleString('ru')} ₸</span> → <span style="color:#dc2626">${d.toLocaleString('ru')} ₸</span>`;}
+  else{el.textContent=p.toLocaleString('ru')+' ₸';}
+}
+
+// ── Авторизация ──────────────────────────────────────────────
+async function doLogin(){
+  const login=document.getElementById('loginInput').value.trim();
+  const pass=document.getElementById('passInput').value;
+  // всегда подгружаем свежие данные при входе
+  showLoading('Проверка...');
+  await syncDown();
+  hideLoading();
+  const u=S.users[login];
+  if(!u||u.password!==pass){document.getElementById('loginErr').textContent='Неверный логин или пароль';return;}
+  document.getElementById('loginErr').textContent='';
+  me={login,...u};
+  show('mainScreen');
+  document.getElementById('userLabel').textContent=u.name;
+  const isAdm=u.role==='admin';
+  document.getElementById('roleLabel').textContent=isAdm?'Администратор':'Врач';
+  document.getElementById('roleLabel').className='badge '+(isAdm?'badge-adm':'badge-doc');
+  document.querySelectorAll('.admin-tab').forEach(t=>t.style.display=isAdm?'':'none');
+  document.getElementById('fDate').value=new Date().toISOString().split('T')[0];
+  updateDurOptions();
+  fillMonthFilters();
+  switchTab('add');
+}
+
+function doLogout(){
+  me=null;
+  show('loginScreen');
+  document.getElementById('loginInput').value='';
+  document.getElementById('passInput').value='';
+}
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===t));
+  ['tabAdd','tabMy','tabReport','tabUsers'].forEach(id=>document.getElementById(id).style.display='none');
+  const map={add:'tabAdd',my:'tabMy',report:'tabReport',users:'tabUsers'};
+  document.getElementById(map[t]).style.display='block';
+  if(t==='my')renderMyTable();
+  if(t==='report')renderReport();
+  if(t==='users')renderUserList();
+}
+
+// ── Записи ───────────────────────────────────────────────────
+async function addRecord(){
+  const date=document.getElementById('fDate').value;
+  const patient=document.getElementById('fPatient').value.trim();
+  const type=document.getElementById('fType').value;
+  const minutes=parseInt(document.getElementById('fDuration').value)||0;
+  const clinic=document.getElementById('fClinic').value.trim();
+  const note=document.getElementById('fNote').value.trim();
+  const disc=document.getElementById('fDisc').checked;
+  if(!date||!patient){document.getElementById('addErr').textContent='Укажите дату и пациента';return;}
+  document.getElementById('addErr').textContent='';
+  const base=getPrice(type,minutes);
+  const final=disc?Math.round(base*0.85):base;
+  S.records.push({id:Date.now(),date,patient,type,minutes,clinic,note,disc,base,final,login:me.login});
+  await syncUp();
+  document.getElementById('fPatient').value='';
+  document.getElementById('fNote').value='';
+  document.getElementById('fClinic').value='';
+  document.getElementById('fDisc').checked=false;
+  updateDurOptions();
+  fillMonthFilters();
+  const ok=document.getElementById('addOk');
+  ok.style.display='inline';
+  setTimeout(()=>ok.style.display='none',3000);
+}
+
+function getMonths(){
+  const s=new Set();S.records.forEach(r=>s.add(r.date.slice(0,7)));return[...s].sort().reverse();
+}
+
+function fillMonthFilters(){
+  const months=getMonths();
+  ['filterMonth','repMonth'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const cur=el.value;
+    el.innerHTML='<option value="">Все периоды</option>';
+    months.forEach(m=>{const[y,mo]=m.split('-');el.innerHTML+=`<option value="${m}">${new Date(y,mo-1).toLocaleString('ru',{month:'long',year:'numeric'})}</option>`;});
+    if(months.includes(cur))el.value=cur;
+  });
+}
+
+function renderMyTable(){
+  const mf=document.getElementById('filterMonth').value;
+  const tf=document.getElementById('filterType').value;
+  let recs=S.records.filter(r=>r.login===me.login);
+  if(mf)recs=recs.filter(r=>r.date.startsWith(mf));
+  if(tf)recs=recs.filter(r=>r.type===tf);
+  recs.sort((a,b)=>b.date.localeCompare(a.date));
+  const total=recs.reduce((s,r)=>s+(r.final||r.base||0),0);
+  const discN=recs.filter(r=>r.disc).length;
+  document.getElementById('myMetrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Наркозов</div><div class="metric-val">${recs.length}</div></div>
+    <div class="metric"><div class="metric-label">Со скидкой −15%</div><div class="metric-val">${discN}</div></div>
+    <div class="metric"><div class="metric-label">Итого</div><div class="metric-val">${total.toLocaleString('ru')} ₸</div></div>`;
+  const wrap=document.getElementById('myTableWrap');
+  if(!recs.length){wrap.innerHTML='<div class="empty">Записей нет.</div>';document.getElementById('myTotal').textContent='';return;}
+  wrap.innerHTML='<table><thead><tr><th>Дата</th><th>Пациент</th><th>Вид</th><th>Время</th><th>Клиника</th><th>Сумма</th><th></th></tr></thead><tbody>'+
+    recs.map(r=>`<tr>
+      <td>${fd(r.date)}</td>
+      <td>${r.patient}${r.note?`<br><span style="font-size:11px;color:#bbb">${r.note}</span>`:''}</td>
+      <td><span class="tag ${TC[r.type]||'tag-mon'}">${r.type}</span></td>
+      <td style="color:#888">${r.type==='Масочный'?'—':fmtDur(r.minutes)}</td>
+      <td style="color:#888">${r.clinic||'—'}</td>
+      <td>${r.disc?`<span class="orig-price">${r.base.toLocaleString('ru')}</span>`:''}${(r.final||r.base).toLocaleString('ru')} ₸${r.disc?'<span class="disc-badge">−15%</span>':''}</td>
+      <td><button class="del-btn" onclick="delRecord(${r.id})">удалить</button></td>
+    </tr>`).join('')+'</tbody></table>';
+  document.getElementById('myTotal').textContent='Итого: '+total.toLocaleString('ru')+' ₸';
+}
+
+async function delRecord(id){
+  if(!confirm('Удалить эту запись?'))return;
+  S.records=S.records.filter(r=>r.id!==id);
+  await syncUp();
+  renderMyTable();fillMonthFilters();
+}
+
+function renderReport(){
+  const wrap=document.getElementById('reportWrap');if(!wrap)return;
+  const mf=document.getElementById('repMonth').value;
+  let recs=S.records;
+  if(mf)recs=recs.filter(r=>r.date.startsWith(mf));
+  const by={};
+  recs.forEach(r=>{
+    if(!by[r.login])by[r.login]={recs:[],total:0,disc:0};
+    by[r.login].recs.push(r);by[r.login].total+=(r.final||r.base||0);if(r.disc)by[r.login].disc++;
+  });
+  const logins=Object.keys(by);
+  if(!logins.length){wrap.innerHTML='<div class="empty">Нет данных</div>';return;}
+  let grand=0,html='';
+  logins.forEach(login=>{
+    const u=S.users[login];const d=by[login];grand+=d.total;
+    html+=`<div class="anest-block"><div class="anest-header">
+      <div><div class="anest-name">${u?u.name:login}</div><div class="anest-meta">${d.recs.length} наркозов · со скидкой: ${d.disc}</div></div>
+      <div class="anest-total">${d.total.toLocaleString('ru')} ₸</div></div>
+      <div style="overflow:auto"><table><thead><tr><th>Дата</th><th>Пациент</th><th>Вид</th><th>Время</th><th>Клиника</th><th>Сумма</th></tr></thead><tbody>`+
+      [...d.recs].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`<tr>
+        <td>${fd(r.date)}</td><td>${r.patient}</td>
+        <td><span class="tag ${TC[r.type]||'tag-mon'}">${r.type}</span></td>
+        <td style="color:#888">${r.type==='Масочный'?'—':fmtDur(r.minutes)}</td>
+        <td style="color:#888">${r.clinic||'—'}</td>
+        <td>${r.disc?`<span class="orig-price">${r.base.toLocaleString('ru')}</span>`:''}${(r.final||r.base).toLocaleString('ru')} ₸${r.disc?'<span class="disc-badge">−15%</span>':''}</td>
+      </tr>`).join('')+'</tbody></table></div></div>';
+  });
+  html+=`<div style="text-align:right;padding:.75rem .25rem;font-size:17px;font-weight:700;border-top:2px solid #e5e5e3;margin-top:.5rem">Общий итог: ${grand.toLocaleString('ru')} ₸</div>`;
+  wrap.innerHTML=html;
+}
+
+// ── Пользователи ─────────────────────────────────────────────
+function renderUserList(){
+  const wrap=document.getElementById('userListWrap');
+  const logins=Object.keys(S.users);
+  if(!logins.length){wrap.innerHTML='<div class="empty">Нет сотрудников</div>';return;}
+  wrap.innerHTML=logins.map(login=>{
+    const u=S.users[login];const isAdm=login==='admin';
+    return `<div class="user-row">
+      <div><div style="font-size:14px;font-weight:700">${u.name}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">Логин: <b>${login}</b> · ${isAdm?'Администратор':'Врач'}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-sm" onclick="changePass('${login}')">🔑 Пароль</button>
+        ${!isAdm?`<button class="del-btn" onclick="delUser('${login}')">удалить</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addUser(){
+  const name=document.getElementById('nName').value.trim();
+  const login=document.getElementById('nLogin').value.trim();
+  const pass=document.getElementById('nPass').value.trim();
+  if(!name||!login||!pass){document.getElementById('userErr').textContent='Заполните все поля';return;}
+  if(S.users[login]){document.getElementById('userErr').textContent='Логин уже занят';return;}
+  document.getElementById('userErr').textContent='';
+  S.users[login]={name,password:pass,role:'doctor'};
+  await syncUp();
+  document.getElementById('nName').value='';document.getElementById('nLogin').value='';document.getElementById('nPass').value='';
+  renderUserList();
+  const ok=document.getElementById('userOk');ok.style.display='inline';setTimeout(()=>ok.style.display='none',2500);
+}
+
+async function delUser(login){
+  const u=S.users[login];if(!u||login==='admin')return;
+  const n=S.records.filter(r=>r.login===login).length;
+  const msg=n>0?`Удалить врача "${u.name}"?\nУ него ${n} записей — они тоже будут удалены!`:`Удалить врача "${u.name}"?`;
+  if(!confirm(msg))return;
+  delete S.users[login];
+  S.records=S.records.filter(r=>r.login!==login);
+  await syncUp();renderUserList();
+}
+
+async function changePass(login){
+  const u=S.users[login];if(!u)return;
+  const p=prompt(`Новый пароль для "${u.name}":`);
+  if(!p||!p.trim())return;
+  S.users[login].password=p.trim();
+  await syncUp();alert('Пароль изменён');
+}
+
+function fd(d){const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
+
+document.getElementById('loginInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('passInput').focus();});
+document.getElementById('passInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+init();
+</script>
+</body>
+</html>
